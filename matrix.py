@@ -189,11 +189,11 @@ class Matrix:
 
     def __str__(self):
         resultantString = ''
-        for rowNumber, row in enumerate(self.matrix, start=1):
-            for colNumber, col in enumerate(row, start=1):
-                resultantString += f'{f"| {col}" if colNumber == self.cols + 1 else col} '
+
+        for rowNumber, row in enumerate(self.matrix):
+            resultantString += ' '.join(map(str, row))
             if self.isAugmented:
-                resultantString += f'| {self.augmentVector.matrix[rowNumber - 1][0]}'
+                resultantString += f' | {self.augmentVector.matrix[rowNumber][0]}'
             resultantString += '\n'
 
         return resultantString
