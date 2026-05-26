@@ -13,12 +13,6 @@ class Matrix:
         else:
             self.isAugmented = True
 
-    def print_matrix(self):
-        for rowNumber, row in enumerate(self.matrix, start=1):
-            for colNumber, col in enumerate(row, start=1):
-                print(f'{f"| {col}" if colNumber == self.cols + 1 else col}', end=' ')
-            print()
-
     def augment(self, vector: Matrix):
         if len(vector.matrix) != self.rows:
             print(f'Vector length {len(vector.matrix)} doesn\'t match number of columns {self.rows}')
@@ -26,12 +20,6 @@ class Matrix:
 
         self.augmentVector = vector
         self.isAugmented = True
-
-        # for rowNumber, row in enumerate(self.matrix, start=1):
-        #     row.append(self.augmentVector[rowNumber - 1])
-        # else:
-        #     self.isAugmented = True
-
 
     def transpose(self):
         if self.isAugmented:
