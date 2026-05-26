@@ -49,7 +49,7 @@ class Matrix:
         return self.matrix
 
     def swapRows(self, source, target):
-        if source > self.rows or target > self.rows or source < 0 or target < 0:
+        if source > self.rows or target > self.rows or source <= 0 or target <= 0:
             print('Invalid source/target rows')
             return self
 
@@ -95,9 +95,10 @@ class Matrix:
 
             for k in range(row + 1, resultantMatrix.rows):
                 if resultantMatrix.matrix[k][lead] != 0:
-                    resultantMatrix.rowOperation(k + 1, row + 1, -(resultantMatrix.matrix[k][lead]/resultantMatrix.matrix[row][lead]))
                     if resultantMatrix.isAugmented:
                         resultantMatrix.augmentVector.rowOperation(k + 1, row + 1, -(resultantMatrix.matrix[k][lead]/resultantMatrix.matrix[row][lead]))
+                    resultantMatrix.rowOperation(k + 1, row + 1, -(resultantMatrix.matrix[k][lead]/resultantMatrix.matrix[row][lead]))
+
 
             row += 1
             lead += 1
@@ -133,17 +134,18 @@ class Matrix:
             # Eliminate entries above pivot
             for k in range(row):
                 if resultantMatrix.matrix[k][lead] != 0:
+                    if resultantMatrix.isAugmented:
+                        resultantMatrix.augmentVector.rowOperation(
+                            k + 1,
+                            row + 1,
+                            -resultantMatrix.matrix[k][lead]
+                        )
                     resultantMatrix.rowOperation(
                         k + 1,
                         row + 1,
                         -resultantMatrix.matrix[k][lead]
                     )
-                    if resultantMatrix.isAugmented:
-                        resultantMatrix.augmentVector.rowOperation(
-                            k + 1,
-                            row + 1,
-                            -resultantMatrix.augmentVector.matrix[k][0]
-                        )
+
 
         return resultantMatrix
 
@@ -155,7 +157,7 @@ class Matrix:
                 if self.matrix[row][col] == 1:
                     # check if this is a leading 1
                     if all(self.matrix[row][k] == 0 for k in range(col)):
-                        pivots.append(col)
+                        pivots.append(col + 1)
                         break
 
         return pivots
@@ -163,9 +165,16 @@ class Matrix:
     def getNonPivotColumns(self):
         pivots = self.getPivotColumns()
 
-        return [col for col in range(self.cols) if col not in pivots]
+        return [col + 1 for col in range(self.cols) if col not in pivots]
 
-    def nullSpaceSolutions(self):
+    def getParticularSolution(self, nullSpaceSolution: bool = False):
+        # b is a vector
+
+        b = Matrix([[0] for _ in range(self.rows)])
+
+        if not nullSpaceSolution:
+            b = self.augmentVector
+
         resultantMatrix = self.getReducedRowEchelonForm()
 
         pivots = resultantMatrix.getPivotColumns()
@@ -176,14 +185,19 @@ class Matrix:
         for free in freeCols:
 
             vec = [0] * resultantMatrix.cols
-            vec[free] = 1
+            vec[free - 1] = 1
 
             for row, pivotCol in enumerate(pivots):
-                vec[pivotCol] = -resultantMatrix.matrix[row][free]
+                vec[pivotCol - 1] = b.matrix[row][0] - resultantMatrix.matrix[row][free - 1]
 
             solutions.append(vec)
 
         return solutions
+
+    def nullSpaceSolution(self):
+        nullMatrix = Matrix([[0] for _ in range(self.rows)])
+
+        return self.getParticularSolution(True)
 
     def __str__(self):
         resultantString = ''
@@ -199,6 +213,7 @@ class Matrix:
 
 
 def main():
+    '''
     A1 = [
         [1, 2],
         [3, 4]
@@ -327,19 +342,27 @@ def main():
         [1, 0, 5, 6],
         [0, 1, 0, 0]
     ]
+    '''
 
     X =[
-        [1, 2, 1, 4],
-        [2, 4, 0, 8],
-        [-1, -2, 1, -2]
+        [1, 2, 0, 1, 3, 0, 2, 1, 4],
+        [2, 4, 1, 3, 6, 1, 5, 2, 8],
+        [1, 2, 1, 2, 3, 1, 3, 1, 5],
+        [3, 6, 1, 4, 9, 1, 7, 3, 12],
+        [0, 0, 1, 1, 0, 1, 1, 0, 1],
+        [1, 2, 2, 3, 3, 2, 4, 1, 6]
     ]
+
 
     listOfMatrices = [X]
     # listOfMatrices = [A1, A2, A3, B1, B2, C1, C2, D1, D2, E1, E2, F1, F2, G1, G2, H1, H2, I1, I2, J1, J2, X]
     augmentX = [
         [1],
         [2],
-        [-1]
+        [1],
+        [3],
+        [0],
+        [1]
     ]
 
     for mat in listOfMatrices:
@@ -354,23 +377,32 @@ def main():
         # matrix.augment(augmentVector)
 
         print('REF:')
-        print(matrix.getRowEchelonForm())
+        refMatrix = matrix.getRowEchelonForm()
+        print(refMatrix)
         print('-'*15)
 
         print('RREF')
-        print(matrix.getReducedRowEchelonForm())
+        rrefMatrix = refMatrix.getReducedRowEchelonForm()
+        print(rrefMatrix)
         print('-'*15)
 
         print("Pivot cols:")
-        print(matrix.getPivotColumns())
+        print(rrefMatrix.getPivotColumns())
         print('-' * 15)
 
         print("Non-pivot cols:")
-        print(matrix.getNonPivotColumns())
+        print(rrefMatrix.getNonPivotColumns())
         print('-' * 15)
 
         print("null space solutions:")
-        print(matrix.nullSpaceSolutions())
+        print(rrefMatrix.nullSpaceSolution())
+        print('-' * 15)
+
+        print("Particular solution:")
+        print(rrefMatrix.getParticularSolution())
+        print('-' * 15)
+
+
         print('-' * 15 + 'END')
 
 
