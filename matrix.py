@@ -145,24 +145,43 @@ class Matrix:
                 if self.matrix[row][col] == 1:
                     # check if this is a leading 1
                     if all(self.matrix[row][k] == 0 for k in range(col)):
-                        pivots.append(col + 1)
-                        break
+                        if all(
+                                self.matrix[r][col] == 0
+                                for r in range(self.rows)
+                                if r != row
+                        ):
+                            pivots.append(col + 1)
+                            break
 
         return pivots
 
     def getNonPivotColumns(self):
         pivots = self.getPivotColumns()
 
-        return [col + 1 for col in range(self.cols) if col not in pivots]
+        return [col for col in range(1, self.cols + 1) if col not in pivots]
 
-    def getParticularSolution(self, nullSpaceSolution: bool = False):
-        # b is a vector
+    def getParticularSolution(self):
+        b = self.augmentVector
 
-        b = Matrix([[0] for _ in range(self.rows)])
+        rref = self.getReducedRowEchelonForm()
 
-        if not nullSpaceSolution:
-            b = self.augmentVector
+        pivots = rref.getPivotColumns()
 
+        n = rref.cols
+        x = [0] * n
+
+        # free variables = 0 already (implicit)
+
+        # compute pivot variables
+        for row, pivotCol in enumerate(pivots):
+            val = b.matrix[row][0]
+
+            # subtract contributions of free variables (all set to 0 → no effect)
+            x[pivotCol - 1] = val
+
+        return x
+
+    def nullSpaceSolution(self):
         resultantMatrix = self.getReducedRowEchelonForm()
 
         pivots = resultantMatrix.getPivotColumns()
@@ -176,16 +195,57 @@ class Matrix:
             vec[free - 1] = 1
 
             for row, pivotCol in enumerate(pivots):
-                vec[pivotCol - 1] = b.matrix[row][0] - resultantMatrix.matrix[row][free - 1]
+                vec[pivotCol - 1] = -resultantMatrix.matrix[row][free - 1]
 
             solutions.append(vec)
 
         return solutions
 
-    def nullSpaceSolution(self):
-        nullMatrix = Matrix([[0] for _ in range(self.rows)])
+    def isConsistent(self):
 
-        return self.getParticularSolution(True)
+        rows = self.rows
+        cols = self.cols
+
+        for row in range(rows):
+
+            allZero = all(
+                self.matrix[row][col] == 0
+                for col in range(cols)
+            )
+
+            if allZero and self.augmentVector.matrix[row][0] != 0:
+                return False
+
+        return True
+
+
+    def getGeneralSolution(self, coeffs = None):
+
+        if not self.isConsistent():
+            return ["inconsistent System"]
+
+        x_p = self.getParticularSolution()
+        nullspace = self.nullSpaceSolution()
+
+        n = len(x_p)
+
+        # return a generic symbolic representation
+        if coeffs is None:
+            return {
+                "particular sol": x_p,
+                "nullspace sol": nullspace,
+                "general_form": "x = x_p + Σ c_i v_i"
+            }
+
+        # numeric evaluation
+        x = x_p[:]
+
+        for c, v in zip(coeffs, nullspace):
+            for i in range(n):
+                x[i] += c * v[i]
+
+        return x
+
 
     def __str__(self):
         resultantString = ''
@@ -198,6 +258,24 @@ class Matrix:
 
         return resultantString
 
+    def __mul__(self, other: Matrix):
+        m = self.rows
+        n = self.cols
+        p = other.cols
+
+        # sanity check
+        assert other.rows == n, "Incompatible dimensions"
+
+        result = [[Fraction(0) for _ in range(p)] for _ in range(m)]
+
+        for i in range(m):
+            for j in range(p):
+                s = Fraction(0)
+                for k in range(n):
+                    s += Fraction(self.matrix[i][k]) * Fraction(other.matrix[k][j])
+                result[i][j] = s
+
+        return result
 
 
 def main():
@@ -332,30 +410,49 @@ def main():
     ]
     '''
 
-    X =[
-        [1, 2, 0, 1, 3, 0, 2, 1, 4],
-        [2, 4, 1, 3, 6, 1, 5, 2, 8],
-        [1, 2, 1, 2, 3, 1, 3, 1, 5],
-        [3, 6, 1, 4, 9, 1, 7, 3, 12],
-        [0, 0, 1, 1, 0, 1, 1, 0, 1],
-        [1, 2, 2, 3, 3, 2, 4, 1, 6]
+    # X =[
+    #     [1, 2, 0, 1, 3, 0, 2, 1, 4],
+    #     [2, 4, 1, 3, 6, 1, 5, 2, 8],
+    #     [1, 2, 1, 2, 3, 1, 3, 1, 5],
+    #     [3, 6, 1, 4, 9, 1, 7, 3, 12],
+    #     [0, 0, 1, 1, 0, 1, 1, 0, 1],
+    #     [1, 2, 2, 3, 3, 2, 4, 1, 6]
+    # ]
+    #
+    # augmentX = [
+    #     [1],
+    #     [2],
+    #     [1],
+    #     [3],
+    #     [0],
+    #     [1]
+    # ]
+
+    A = [
+        [1, 2, 3, 1, 0, 2, 4, 5, 6],
+        [2, 4, 6, 2, 1, 4, 8, 10, 12],
+        [1, 1, 1, 0, 1, 1, 2, 2, 3],
+        [3, 6, 9, 3, 1, 6, 12, 15, 18],
+        [0, 1, 1, 0, 1, 1, 1, 2, 2],
+        [1, 3, 4, 1, 2, 3, 5, 7, 8]
     ]
 
-
-    listOfMatrices = [X]
-    # listOfMatrices = [A1, A2, A3, B1, B2, C1, C2, D1, D2, E1, E2, F1, F2, G1, G2, H1, H2, I1, I2, J1, J2, X]
-    augmentX = [
+    b = [
         [1],
         [2],
         [1],
         [3],
-        [0],
-        [1]
+        [1],
+        [2]
     ]
+
+    listOfMatrices = [A]
+    # listOfMatrices = [A1, A2, A3, B1, B2, C1, C2, D1, D2, E1, E2, F1, F2, G1, G2, H1, H2, I1, I2, J1, J2, X]
+
 
     for mat in listOfMatrices:
         matrix = Matrix(mat)
-        augmentMatrix = Matrix(augmentX)
+        augmentMatrix = Matrix(b)
         matrix.augment(augmentMatrix)
 
         print('Matrix')
@@ -388,6 +485,10 @@ def main():
 
         print("Particular solution:")
         print(rrefMatrix.getParticularSolution())
+        print('-' * 15)
+
+        print("General solution:")
+        print(rrefMatrix.getGeneralSolution())
         print('-' * 15)
 
 
