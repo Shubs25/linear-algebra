@@ -1,5 +1,6 @@
 from fractions import Fraction
 from copy import deepcopy
+from math import sqrt
 
 class Matrix:
     def __init__(self, matrix: object, augment: Matrix = None) -> None:
@@ -246,6 +247,105 @@ class Matrix:
 
         return x
 
+    def getLUWithElemntaryMatrices(self):
+        n = self.rows
+
+        A = [[self.matrix[i][j] for j in range(n)] for i in range(n)]
+        U = [[A[i][j] for j in range(n)] for i in range(n)]
+        L = [[Fraction(1 if i == j else 0) for j in range(n)] for i in range(n)]
+
+        elementary_matrices = []
+
+        for k in range(n):
+
+            if U[k][k] == 0:
+                raise ZeroDivisionError("Zero pivot encountered (no pivoting allowed for SPD case assumption).")
+
+            for i in range(k + 1, n):
+
+                factor = U[i][k] / U[k][k]
+
+                # construct elementary matrix E
+                E = [[Fraction(1 if r == c else 0) for c in range(n)] for r in range(n)]
+                E[i][k] = -factor
+
+                elementary_matrices.append(Matrix(E))
+
+                # apply row operation to U
+                for j in range(n):
+                    U[i][j] -= factor * U[k][j]
+
+                # update L using inverse effect
+                L[i][k] += factor
+
+        return Matrix(L), Matrix(U), elementary_matrices
+
+    def cholesky(self):
+        n = self.rows
+
+        # L initialized with zeros
+        L = [[Fraction(0) for _ in range(n)] for _ in range(n)]
+
+        A = [[self.matrix[i][j] for j in range(n)] for i in range(n)]
+
+        for i in range(n):
+            for j in range(i + 1):
+
+                sum_ = sum(L[i][k] * L[j][k] for k in range(j))
+
+                if i == j:
+                    val = A[i][i] - sum_
+
+                    if val <= 0:
+                        raise ValueError("Matrix is not positive definite")
+
+                    L[i][j] = Fraction(sqrt(val))
+
+                else:
+                    if L[j][j] == 0:
+                        raise ZeroDivisionError("Zero diagonal encountered")
+
+                    L[i][j] = (A[i][j] - sum_) / L[j][j]
+
+        return Matrix(L)
+
+    def QRDecomposition(self):
+        A = self.matrix
+        m = self.rows
+        n = self.cols
+
+        # Q as list of orthonormal vectors
+        Q = [[0 for _ in range(n)] for _ in range(m)]
+        # R matrix
+        R = [[0 for _ in range(n)] for _ in range(n)]
+
+        # store orthonormal vectors
+        q_vectors = []
+
+        for j in range(n):
+            v = [A[i][j] for i in range(m)]  # column j
+
+            # Gram-Schmidt projection
+            for i in range(j):
+                R[i][j] = dot(q_vectors[i], v)
+                proj = scalar_mult(q_vectors[i], R[i][j])
+                v = subtract(v, proj)
+
+            R[j][j] = norm(v)
+
+            if R[j][j] == 0:
+                raise ValueError("Columns are linearly dependent")
+
+            q = [vi / R[j][j] for vi in v]
+            q_vectors.append(q)
+
+        # build Q matrix (columns = q_vectors)
+        for j in range(n):
+            for i in range(m):
+                Q[i][j] = q_vectors[j][i]
+
+        return Matrix(Q), Matrix(R)
+
 
     def __str__(self):
         resultantString = ''
@@ -278,137 +378,21 @@ class Matrix:
         return result
 
 
+# TODO: these methods can later be encapsulated in a new vector subclass
+def dot(u, v):
+    return sum(ui * vi for ui, vi in zip(u, v))
+
+def norm(v):
+    return sqrt(float(dot(v, v)))
+
+def scalar_mult(v, s):
+    return [s * vi for vi in v]
+
+def subtract(u, v):
+    return [ui - vi for ui, vi in zip(u, v)]
+
+
 def main():
-    '''
-    A1 = [
-        [1, 2],
-        [3, 4]
-    ]
-
-    A2 = [
-        [2, 1, 3],
-        [4, 1, 6],
-        [2, 0, 2]
-    ]
-
-    A3 = [
-        [1, 0, 2],
-        [0, 1, 3],
-        [0, 0, 1]
-    ]
-
-    B1 = [
-        [1, 2, 3],
-        [0, 1, 4],
-        [0, 0, 1]
-    ]
-
-    B2 = [
-        [1, 0, 0, 5],
-        [0, 1, 0, 6],
-        [0, 0, 1, 7]
-    ]
-
-    C1 = [
-        [1, 2, 3],
-        [0, 0, 0],
-        [0, 0, 0]
-    ]
-
-    C2 = [
-        [0, 0, 0],
-        [1, 2, 3],
-        [0, 0, 0]
-    ]
-
-    D1 = [
-        [1, 2, 3],
-        [2, 4, 6],
-        [3, 6, 9]
-    ]
-
-    D2 = [
-        [1, 2, 3, 4],
-        [2, 4, 6, 8],
-        [1, 1, 1, 1]
-    ]
-
-    E1 = [
-        [0, 2, 1],
-        [1, 1, 0],
-        [2, 3, 4]
-    ]
-
-    E2 = [
-        [0, 0, 1],
-        [0, 2, 3],
-        [1, 0, 0]
-    ]
-
-    F1 = [
-        [-1, 2, -3],
-        [2, -4, 6],
-        [-3, 6, -9]
-    ]
-
-    F2 = [
-        [0, -2, 1],
-        [-1, 3, -4],
-        [2, -1, 5]
-    ]
-
-    G1 = [
-        [1, 2, 0, 1, 3],
-        [2, 4, 1, 3, 7],
-        [1, 2, 1, 2, 4]
-    ]
-
-    G2 = [
-        [1, 2, 3],
-        [2, 4, 7],
-        [1, 1, 1],
-        [3, 5, 9],
-        [2, 3, 4]
-    ]
-
-    H1 = [
-        [1, 3, 2],
-        [2, 6, 5],
-        [1, 3, 4]
-    ]
-
-    H2 = [
-        [2, 4, 8],
-        [3, 6, 12],
-        [1, 2, 3]
-    ]
-
-    I1 = [
-        [1, 2, 3],
-        [1, 2, 3],
-        [1, 2, 3]
-    ]
-
-    I2 = [
-        [2, 1, 0],
-        [2, 1, 0],
-        [4, 2, 0]
-    ]
-
-    J1 = [
-        [0, 0, 1, 2],
-        [0, 1, 0, 3],
-        [1, 0, 0, 4],
-        [2, 0, 0, 5]
-    ]
-
-    J2 = [
-        [0, 0, 0, 1],
-        [0, 2, 3, 4],
-        [1, 0, 5, 6],
-        [0, 1, 0, 0]
-    ]
-    '''
 
     # X =[
     #     [1, 2, 0, 1, 3, 0, 2, 1, 4],
@@ -494,8 +478,39 @@ def main():
 
         print('-' * 15 + 'END')
 
+def main2():
+    matrixA = Matrix([
+        [4, 1, 2],
+        [1, 3, 0],
+        [2, 0, 5],
+    ])
+    # matrixA = Matrix([
+    #     [1, 2, 0, 1, 3],
+    #     [0, 1, 4, 2, 1],
+    #     [2, 0, 1, 3, 5],
+    #     [1, 1, 1, 0, 2],
+    #     [3, 2, 5, 1, 0]
+    # ])
+
+    for stuff in matrixA.getLUWithElemntaryMatrices():
+        if isinstance(stuff, list):
+            print('Elementary matrices: ' + '-'*10)
+            for mat in stuff:
+                print(mat)
+            print('-'*15)
+        else:
+            print(stuff)
+
+    print('*--------------------cholesky----------------*')
+    print(matrixA.cholesky())
+    print('*--------------------cholesky----------------*')
+    print('*--------------------QR----------------*')
+    for mat in matrixA.QRDecomposition():
+        print(mat)
+    print('*--------------------QR----------------*')
+
 
 
 if __name__ == '__main__':
-    main()
+    main2()
 
