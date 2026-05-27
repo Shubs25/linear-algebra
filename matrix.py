@@ -484,6 +484,13 @@ def main2():
         [1, 3, 0],
         [2, 0, 5],
     ])
+    # matrixA = Matrix([
+    #     [1, 2, 0, 1, 3],
+    #     [0, 1, 4, 2, 1],
+    #     [2, 0, 1, 3, 5],
+    #     [1, 1, 1, 0, 2],
+    #     [3, 2, 5, 1, 0]
+    # ])
 
     for stuff in matrixA.getLUWithElemntaryMatrices():
         if isinstance(stuff, list):
