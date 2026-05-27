@@ -309,6 +309,44 @@ class Matrix:
 
         return Matrix(L)
 
+    def QRDecomposition(self):
+        A = self.matrix
+        m = self.rows
+        n = self.cols
+
+        # Q as list of orthonormal vectors
+        Q = [[0 for _ in range(n)] for _ in range(m)]
+        # R matrix
+        R = [[0 for _ in range(n)] for _ in range(n)]
+
+        # store orthonormal vectors
+        q_vectors = []
+
+        for j in range(n):
+            v = [A[i][j] for i in range(m)]  # column j
+
+            # Gram-Schmidt projection
+            for i in range(j):
+                R[i][j] = dot(q_vectors[i], v)
+                proj = scalar_mult(q_vectors[i], R[i][j])
+                v = subtract(v, proj)
+
+            R[j][j] = norm(v)
+
+            if R[j][j] == 0:
+                raise ValueError("Columns are linearly dependent")
+
+            q = [vi / R[j][j] for vi in v]
+            q_vectors.append(q)
+
+        # build Q matrix (columns = q_vectors)
+        for j in range(n):
+            for i in range(m):
+                Q[i][j] = q_vectors[j][i]
+
+        return Matrix(Q), Matrix(R)
+
+
     def __str__(self):
         resultantString = ''
 
@@ -338,6 +376,20 @@ class Matrix:
                 result[i][j] = s
 
         return result
+
+
+# TODO: these methods can later be encapsulated in a new vector subclass
+def dot(u, v):
+    return sum(ui * vi for ui, vi in zip(u, v))
+
+def norm(v):
+    return sqrt(float(dot(v, v)))
+
+def scalar_mult(v, s):
+    return [s * vi for vi in v]
+
+def subtract(u, v):
+    return [ui - vi for ui, vi in zip(u, v)]
 
 
 def main():
@@ -430,7 +482,7 @@ def main2():
     matrixA = Matrix([
         [4, 1, 2],
         [1, 3, 0],
-        [2, 0, 5]
+        [2, 0, 5],
     ])
 
     for stuff in matrixA.getLUWithElemntaryMatrices():
@@ -445,6 +497,12 @@ def main2():
     print('*--------------------cholesky----------------*')
     print(matrixA.cholesky())
     print('*--------------------cholesky----------------*')
+    print('*--------------------QR----------------*')
+    for mat in matrixA.QRDecomposition():
+        print(mat)
+    print('*--------------------QR----------------*')
+
+
 
 if __name__ == '__main__':
     main2()
