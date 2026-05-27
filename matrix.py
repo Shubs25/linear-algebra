@@ -1,5 +1,6 @@
 from fractions import Fraction
 from copy import deepcopy
+from math import sqrt
 
 class Matrix:
     def __init__(self, matrix: object, augment: Matrix = None) -> None:
@@ -246,6 +247,67 @@ class Matrix:
 
         return x
 
+    def getLUWithElemntaryMatrices(self):
+        n = self.rows
+
+        A = [[self.matrix[i][j] for j in range(n)] for i in range(n)]
+        U = [[A[i][j] for j in range(n)] for i in range(n)]
+        L = [[Fraction(1 if i == j else 0) for j in range(n)] for i in range(n)]
+
+        elementary_matrices = []
+
+        for k in range(n):
+
+            if U[k][k] == 0:
+                raise ZeroDivisionError("Zero pivot encountered (no pivoting allowed for SPD case assumption).")
+
+            for i in range(k + 1, n):
+
+                factor = U[i][k] / U[k][k]
+
+                # construct elementary matrix E
+                E = [[Fraction(1 if r == c else 0) for c in range(n)] for r in range(n)]
+                E[i][k] = -factor
+
+                elementary_matrices.append(Matrix(E))
+
+                # apply row operation to U
+                for j in range(n):
+                    U[i][j] -= factor * U[k][j]
+
+                # update L using inverse effect
+                L[i][k] += factor
+
+        return Matrix(L), Matrix(U), elementary_matrices
+
+    def cholesky(self):
+        n = self.rows
+
+        # L initialized with zeros
+        L = [[Fraction(0) for _ in range(n)] for _ in range(n)]
+
+        A = [[self.matrix[i][j] for j in range(n)] for i in range(n)]
+
+        for i in range(n):
+            for j in range(i + 1):
+
+                sum_ = sum(L[i][k] * L[j][k] for k in range(j))
+
+                if i == j:
+                    val = A[i][i] - sum_
+
+                    if val <= 0:
+                        raise ValueError("Matrix is not positive definite")
+
+                    L[i][j] = Fraction(sqrt(val))
+
+                else:
+                    if L[j][j] == 0:
+                        raise ZeroDivisionError("Zero diagonal encountered")
+
+                    L[i][j] = (A[i][j] - sum_) / L[j][j]
+
+        return Matrix(L)
 
     def __str__(self):
         resultantString = ''
@@ -279,136 +341,6 @@ class Matrix:
 
 
 def main():
-    '''
-    A1 = [
-        [1, 2],
-        [3, 4]
-    ]
-
-    A2 = [
-        [2, 1, 3],
-        [4, 1, 6],
-        [2, 0, 2]
-    ]
-
-    A3 = [
-        [1, 0, 2],
-        [0, 1, 3],
-        [0, 0, 1]
-    ]
-
-    B1 = [
-        [1, 2, 3],
-        [0, 1, 4],
-        [0, 0, 1]
-    ]
-
-    B2 = [
-        [1, 0, 0, 5],
-        [0, 1, 0, 6],
-        [0, 0, 1, 7]
-    ]
-
-    C1 = [
-        [1, 2, 3],
-        [0, 0, 0],
-        [0, 0, 0]
-    ]
-
-    C2 = [
-        [0, 0, 0],
-        [1, 2, 3],
-        [0, 0, 0]
-    ]
-
-    D1 = [
-        [1, 2, 3],
-        [2, 4, 6],
-        [3, 6, 9]
-    ]
-
-    D2 = [
-        [1, 2, 3, 4],
-        [2, 4, 6, 8],
-        [1, 1, 1, 1]
-    ]
-
-    E1 = [
-        [0, 2, 1],
-        [1, 1, 0],
-        [2, 3, 4]
-    ]
-
-    E2 = [
-        [0, 0, 1],
-        [0, 2, 3],
-        [1, 0, 0]
-    ]
-
-    F1 = [
-        [-1, 2, -3],
-        [2, -4, 6],
-        [-3, 6, -9]
-    ]
-
-    F2 = [
-        [0, -2, 1],
-        [-1, 3, -4],
-        [2, -1, 5]
-    ]
-
-    G1 = [
-        [1, 2, 0, 1, 3],
-        [2, 4, 1, 3, 7],
-        [1, 2, 1, 2, 4]
-    ]
-
-    G2 = [
-        [1, 2, 3],
-        [2, 4, 7],
-        [1, 1, 1],
-        [3, 5, 9],
-        [2, 3, 4]
-    ]
-
-    H1 = [
-        [1, 3, 2],
-        [2, 6, 5],
-        [1, 3, 4]
-    ]
-
-    H2 = [
-        [2, 4, 8],
-        [3, 6, 12],
-        [1, 2, 3]
-    ]
-
-    I1 = [
-        [1, 2, 3],
-        [1, 2, 3],
-        [1, 2, 3]
-    ]
-
-    I2 = [
-        [2, 1, 0],
-        [2, 1, 0],
-        [4, 2, 0]
-    ]
-
-    J1 = [
-        [0, 0, 1, 2],
-        [0, 1, 0, 3],
-        [1, 0, 0, 4],
-        [2, 0, 0, 5]
-    ]
-
-    J2 = [
-        [0, 0, 0, 1],
-        [0, 2, 3, 4],
-        [1, 0, 5, 6],
-        [0, 1, 0, 0]
-    ]
-    '''
 
     # X =[
     #     [1, 2, 0, 1, 3, 0, 2, 1, 4],
@@ -494,8 +426,26 @@ def main():
 
         print('-' * 15 + 'END')
 
+def main2():
+    matrixA = Matrix([
+        [4, 1, 2],
+        [1, 3, 0],
+        [2, 0, 5]
+    ])
 
+    for stuff in matrixA.getLUWithElemntaryMatrices():
+        if isinstance(stuff, list):
+            print('Elementary matrices: ' + '-'*10)
+            for mat in stuff:
+                print(mat)
+            print('-'*15)
+        else:
+            print(stuff)
+
+    print('*--------------------cholesky----------------*')
+    print(matrixA.cholesky())
+    print('*--------------------cholesky----------------*')
 
 if __name__ == '__main__':
-    main()
+    main2()
 
