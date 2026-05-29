@@ -1,6 +1,8 @@
 from fractions import Fraction
 from copy import deepcopy
 from math import sqrt
+from random import randint
+
 
 class Matrix:
     def __init__(self, matrix: object, augment: Matrix = None) -> None:
@@ -15,8 +17,8 @@ class Matrix:
             self.isAugmented = True
 
     def augment(self, vector: Matrix):
-        if len(vector.matrix) != self.rows:
-            print(f'Vector length {len(vector.matrix)} doesn\'t match number of columns {self.rows}')
+        if vector.rows != self.rows:
+            print(f'Vector length {vector.rows} doesn\'t match number of columns {self.rows}')
             return
 
         self.augmentVector = vector
@@ -177,7 +179,7 @@ class Matrix:
         for row, pivotCol in enumerate(pivots):
             val = b.matrix[row][0]
 
-            # subtract contributions of free variables (all set to 0 → no effect)
+            # subtract contributions of free variables (all set to 0 -> no effect)
             x[pivotCol - 1] = val
 
         return x
@@ -391,126 +393,72 @@ def scalar_mult(v, s):
 def subtract(u, v):
     return [ui - vi for ui, vi in zip(u, v)]
 
+def verifyGeneralSolution(A: Matrix, x_p, nullspace):
+    rows = A.rows
+    cols = len(x_p)
+    b = A.augmentVector
+
+    # Coeff - let's pick 1 for simplicity
+    x = x_p[:]
+
+    for v in nullspace:
+        for i in range(cols):
+            x[i] += v[i]
+
+    # check Ax = b
+    for i in range(A.rows):
+        lhs = sum(A.matrix[i][j] * x[j] for j in range(cols))
+        if lhs != b.matrix[i][0]:
+            return False
+
+    return True
+
 
 def main():
+    '''m = 6
+    n = 9
 
-    # X =[
-    #     [1, 2, 0, 1, 3, 0, 2, 1, 4],
-    #     [2, 4, 1, 3, 6, 1, 5, 2, 8],
-    #     [1, 2, 1, 2, 3, 1, 3, 1, 5],
-    #     [3, 6, 1, 4, 9, 1, 7, 3, 12],
-    #     [0, 0, 1, 1, 0, 1, 1, 0, 1],
-    #     [1, 2, 2, 3, 3, 2, 4, 1, 6]
-    # ]
-    #
-    # augmentX = [
-    #     [1],
-    #     [2],
-    #     [1],
-    #     [3],
-    #     [0],
-    #     [1]
-    # ]
+    A = [[randint(-10, 10) for _ in range(n)] for _ in range(m)]
+    b = [[randint(-10, 10)] for _ in range(m)]
 
-    A = [
-        [1, 2, 3, 1, 0, 2, 4, 5, 6],
-        [2, 4, 6, 2, 1, 4, 8, 10, 12],
-        [1, 1, 1, 0, 1, 1, 2, 2, 3],
-        [3, 6, 9, 3, 1, 6, 12, 15, 18],
-        [0, 1, 1, 0, 1, 1, 1, 2, 2],
-        [1, 3, 4, 1, 2, 3, 5, 7, 8]
-    ]
+    matrixA = Matrix(A)
+    matrixB = Matrix(b)
 
-    b = [
-        [1],
-        [2],
-        [1],
-        [3],
-        [1],
-        [2]
-    ]
+    matrixA.augment(matrixB)
 
-    listOfMatrices = [A]
-    # listOfMatrices = [A1, A2, A3, B1, B2, C1, C2, D1, D2, E1, E2, F1, F2, G1, G2, H1, H2, I1, I2, J1, J2, X]
+    print(f'm = {m}, n = {n}')
+    print('-' * 15)
+    print(matrixA)
+    print('-'*15)
+    print(matrixA.getRowEchelonForm())
+    print('-'*15)
+    rrefA = matrixA.getReducedRowEchelonForm()
+    print(rrefA)
+    print('-'*15)
+    print('Pivot Cols: ', rrefA.getPivotColumns())
+    print('Free Cols: ', rrefA.getNonPivotColumns())
+    print('-'*15)
+    print('Nullspace Solution:')
+    nullspaces = rrefA.nullSpaceSolution()
+    for nullspace in nullspaces:
+        print(nullspace)
+    print('-'*15)
+    print('Particular Solution:')
+    if not rrefA.isConsistent():
+        print('Inconsistent system, no exact particular solution')
+    particularSol = rrefA.getParticularSolution()
+    print(particularSol)
+    print('-'*15)
+    generalSol = rrefA.getGeneralSolution()
+    if isinstance(generalSol, dict):
+        for key, value in generalSol.items():
+            print(key, ' : ', value)
+    print('-'*15)
 
-
-    for mat in listOfMatrices:
-        matrix = Matrix(mat)
-        augmentMatrix = Matrix(b)
-        matrix.augment(augmentMatrix)
-
-        print('Matrix')
-        print(matrix)
-        print('-'*15)
-        # augmentVector = [11, 12]
-        # matrix.augment(augmentVector)
-
-        print('REF:')
-        refMatrix = matrix.getRowEchelonForm()
-        print(refMatrix)
-        print('-'*15)
-
-        print('RREF')
-        rrefMatrix = refMatrix.getReducedRowEchelonForm()
-        print(rrefMatrix)
-        print('-'*15)
-
-        print("Pivot cols:")
-        print(rrefMatrix.getPivotColumns())
-        print('-' * 15)
-
-        print("Non-pivot cols:")
-        print(rrefMatrix.getNonPivotColumns())
-        print('-' * 15)
-
-        print("null space solutions:")
-        print(rrefMatrix.nullSpaceSolution())
-        print('-' * 15)
-
-        print("Particular solution:")
-        print(rrefMatrix.getParticularSolution())
-        print('-' * 15)
-
-        print("General solution:")
-        print(rrefMatrix.getGeneralSolution())
-        print('-' * 15)
-
-
-        print('-' * 15 + 'END')
-
-def main2():
-    matrixA = Matrix([
-        [4, 1, 2],
-        [1, 3, 0],
-        [2, 0, 5],
-    ])
-    # matrixA = Matrix([
-    #     [1, 2, 0, 1, 3],
-    #     [0, 1, 4, 2, 1],
-    #     [2, 0, 1, 3, 5],
-    #     [1, 1, 1, 0, 2],
-    #     [3, 2, 5, 1, 0]
-    # ])
-
-    for stuff in matrixA.getLUWithElemntaryMatrices():
-        if isinstance(stuff, list):
-            print('Elementary matrices: ' + '-'*10)
-            for mat in stuff:
-                print(mat)
-            print('-'*15)
-        else:
-            print(stuff)
-
-    print('*--------------------cholesky----------------*')
-    print(matrixA.cholesky())
-    print('*--------------------cholesky----------------*')
-    print('*--------------------QR----------------*')
-    for mat in matrixA.QRDecomposition():
-        print(mat)
-    print('*--------------------QR----------------*')
+    assert verifyGeneralSolution(matrixA, particularSol, nullspaces), "Verification Failed"'''
 
 
 
 if __name__ == '__main__':
-    main2()
+    main()
 
